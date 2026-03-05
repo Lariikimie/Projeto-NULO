@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Project.Gameplay.Dialogue; // usa DialogueUI do namespace
 
 public class PauseMenuController : MonoBehaviour
 {
@@ -13,7 +12,7 @@ public class PauseMenuController : MonoBehaviour
     [SerializeField] private CheckPointManager checkpointManager;
     [SerializeField] private MapPanelController mapPanelController;
     [SerializeField] private PauseOptionsController pauseOptionsController;
-    [SerializeField] private DialogueUI dialogueUI;             // agora é o do namespace
+    [SerializeField] private DialogueUI dialogueUI;
 
     [Header("Inputs (fallback, se NÃO houver UINavigationInput)")]
     [SerializeField] private KeyCode pauseKey = KeyCode.Escape;
@@ -54,7 +53,7 @@ public class PauseMenuController : MonoBehaviour
             pauseMenuPanel.SetActive(false);
 
         if (dialogueUI == null)
-            dialogueUI = FindObjectOfType<DialogueUI>(true); // pega o do namespace
+            dialogueUI = FindObjectOfType<DialogueUI>(true);
 
         if (menuItems == null || menuItems.Length == 0)
         {
