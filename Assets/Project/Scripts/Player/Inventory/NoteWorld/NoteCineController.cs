@@ -1,6 +1,31 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
+/// <summary>
+/// Controla a exibição da nota 3D no "NoteWorld" (câmera + RenderTexture).
+/// Agora usa UMA ÚNICA NoteWorldView e troca a textura quando o jogador pega novas notas.
+/// Também toca um som ao abrir a área de nota.
+///
+/// ════════════════════════════════════════════════════════════════
+/// COMO CONFIGURAR — PASSO A PASSO
+/// ════════════════════════════════════════════════════════════════
+///
+/// ── HIERARQUIA ──
+/// Coloque este script em um GameObject vazio chamado "NoteCineController"
+/// (pode ficar na raiz ou dentro de um "Managers" GameObject).
+///
+/// ── INSPECTOR ──
+/// • Player Inventory → arraste o componente PlayerInventory do Player
+/// • Note Camera      → câmera que renderiza o NoteWorld (Target Texture = RT_Nota)
+/// • Note Panel       → painel da HUD com o RawImage da RT_Nota
+/// • Note World View  → arraste o NoteWorldObject (que tem o script NoteWorldView)
+/// • Note Sound       → arraste o AudioClip do som de selecionar/trocar nota
+///                      (apenas 1 som, conforme solicitado)
+///
+/// ── SOBRE O SOM ──
+/// O AudioSource é criado automaticamente neste GameObject.
+/// Você só precisa arrastar o AudioClip no campo "Note Sound".
+/// ════════════════════════════════════════════════════════════════
+/// </summary>
 public class NoteCineController : MonoBehaviour
 {
     public static NoteCineController Instance { get; private set; }
@@ -12,17 +37,26 @@ public class NoteCineController : MonoBehaviour
     [SerializeField] private Camera noteCamera;
 
     [Header("UI")]
-    [Tooltip("Painel de notas (NotePanel) que contém a RawImage com a RT_Nota. ATENÇÃO: este painel é filho do Canvas, NÃO é o InventoryPanel.")]
+    [Tooltip("Painel de notas (NotePanel) que contém o RawImage com a RT_Nota.")]
     [SerializeField] private GameObject notePanel;
 
-    [Header("Notas no mundo (NoteWorldView)")]
-    [Tooltip("Lista de notas 3D no 'mundo da nota'. Se deixar vazio, o script tenta encontrar automaticamente.")]
-    [SerializeField] private List<NoteWorldView> noteWorldViews = new List<NoteWorldView>();
+    [Header("Nota 3D (UMA ÚNICA)")]
+    [Tooltip("O único NoteWorldView da cena — a nota 3D cuja textura muda conforme as notas coletadas.")]
+    [SerializeField] private NoteWorldView noteWorldView;
 
+    [Header("Som")]
+    [Tooltip("Som reproduzido ao abrir/trocar nota (apenas 1 AudioClip).")]
+    [SerializeField] private AudioClip noteSound;
+    [Range(0f, 1f)]
+    [SerializeField] private float noteSoundVolume = 1f;
+
+    // ── Estado ──
     private bool isShowing = false;
-    private int currentNoteIndex = 0;   // índice da nota atual na lista do inventário
+    private AudioSource _audioSource;
 
     public bool IsShowing => isShowing;
+
+    // ────────────────────────────────────────────────────────────────
 
     private void Awake()
     {
@@ -35,202 +69,140 @@ public class NoteCineController : MonoBehaviour
 
         Instance = this;
 
-        if (noteCamera == null)
-            Debug.LogWarning("[NoteCine] noteCamera NÃO atribuída no Inspector.");
-        else
-            Debug.Log("[NoteCine] Awake: noteCamera = " + noteCamera.name);
+        // Cria AudioSource automaticamente
+        _audioSource = gameObject.AddComponent<AudioSource>();
+        _audioSource.playOnAwake = false;
+        _audioSource.spatialBlend = 0f; // som 2D (UI)
+
+        ValidateReferences();
 
         if (notePanel != null)
-        {
             notePanel.SetActive(false);
-            Debug.Log("[NoteCine] NotePanel inicial DESATIVADO.");
-        }
-        else
-        {
-            Debug.LogWarning("[NoteCine] notePanel NÃO atribuído no Inspector.");
-        }
     }
 
     private void Start()
     {
+        // Fallback: busca PlayerInventory na cena
+        if (playerInventory == null)
+            playerInventory = FindObjectOfType<PlayerInventory>();
+
         if (playerInventory == null)
         {
-            playerInventory = FindObjectOfType<PlayerInventory>();
-            if (playerInventory != null)
-                Debug.Log("[NoteCine] PlayerInventory encontrado automaticamente: " + playerInventory.name);
-            else
-                Debug.LogWarning("[NoteCine] PlayerInventory NÃO encontrado automaticamente na cena.");
+            Debug.LogWarning("[NoteCine] PlayerInventory NÃO encontrado. Troca de textura desativada.");
+            return;
         }
 
-        // Se a lista estiver vazia, tenta encontrar automaticamente todos NoteWorldView na cena
-        if (noteWorldViews == null || noteWorldViews.Count == 0)
-        {
-            noteWorldViews = new List<NoteWorldView>(FindObjectsOfType<NoteWorldView>());
-            Debug.Log("[NoteCine] NoteWorldViews encontrados automaticamente: " + noteWorldViews.Count);
-        }
+        // ── Assina o evento: quando uma nota é coletada, troca a textura ──
+        playerInventory.OnNoteAdded += OnNoteCollected;
+        Debug.Log("[NoteCine] Assinado evento OnNoteAdded do PlayerInventory.");
     }
 
+    private void OnDestroy()
+    {
+        if (playerInventory != null)
+            playerInventory.OnNoteAdded -= OnNoteCollected;
+    }
+
+    // ─────────────────── EVENTOS ────────────────────────────────────
+
+    /// <summary>Chamado automaticamente quando o jogador pega uma nova nota.</summary>
+    private void OnNoteCollected(NoteData newNote)
+    {
+        if (newNote == null) return;
+
+        Debug.Log("[NoteCine] Nova nota coletada: " + newNote.title + ". Trocando textura da nota 3D.");
+
+        if (noteWorldView != null)
+            noteWorldView.ApplyNoteData(newNote);
+        else
+            Debug.LogWarning("[NoteCine] NoteWorldView não atribuída — textura não foi trocada.");
+    }
+
+    // ─────────────────── ABRIR / FECHAR ─────────────────────────────
+
     /// <summary>
-    /// Abre a tela da nota (NotePanel com RT_Nota) mostrando a primeira nota do inventário
-    /// para a qual exista um NoteWorldView configurado.
-    /// Chamado pelo slot de NotesCamera (slot 4) ENQUANTO o inventário já está aberto.
-    /// NÃO mexe em Time.timeScale nem em InventoryPanel.
+    /// Abre a tela da nota (NotePanel com RT_Nota).
+    /// Chamado pelo botão/slot de notas no inventário.
     /// </summary>
     public void ShowNoteArea()
     {
-        Debug.Log("[NoteCine] ShowNoteArea chamado.");
-
         if (isShowing)
+            return;
+
+        if (playerInventory == null || playerInventory.GetAllNotes().Count == 0)
         {
-            Debug.Log("[NoteCine] Já está mostrando a área de nota. Ignorando.");
+            Debug.Log("[NoteCine] Nenhuma nota no inventário. Tela não será aberta.");
             return;
         }
 
-        if (playerInventory == null)
+        if (noteCamera == null || notePanel == null)
         {
-            Debug.LogWarning("[NoteCine] PlayerInventory não atribuído. Não é possível verificar notas.");
+            Debug.LogWarning("[NoteCine] noteCamera ou notePanel não atribuídos.");
             return;
         }
 
-        var notes = playerInventory.GetAllNotes();
-        if (notes == null || notes.Count == 0)
+        if (noteWorldView == null)
         {
-            Debug.Log("[NoteCine] Player NÃO possui notas no inventário. Tela de nota NÃO será aberta.");
+            Debug.LogWarning("[NoteCine] NoteWorldView não atribuída.");
             return;
         }
 
-        if (noteCamera == null)
-        {
-            Debug.LogWarning("[NoteCine] noteCamera não atribuída. Não é possível mostrar a tela da nota.");
-            return;
-        }
-
-        if (notePanel == null)
-        {
-            Debug.LogWarning("[NoteCine] notePanel não atribuído. Não é possível mostrar a tela da nota.");
-            return;
-        }
-
-        if (noteWorldViews == null || noteWorldViews.Count == 0)
-        {
-            Debug.LogWarning("[NoteCine] Nenhum NoteWorldView configurado na cena. Nada para mostrar.");
-            return;
-        }
-
-        // Escolhe a primeira nota do inventário que tenha um NoteWorldView correspondente
-        NoteData noteToShow = null;
-        NoteWorldView viewToUse = null;
-
-        for (int i = 0; i < notes.Count; i++)
-        {
-            NoteData candidate = notes[i];
-            if (candidate == null) continue;
-
-            NoteWorldView view = FindViewForNote(candidate);
-            if (view != null)
-            {
-                noteToShow = candidate;
-                viewToUse = view;
-                currentNoteIndex = i;
-                break;
-            }
-        }
-
-        if (noteToShow == null || viewToUse == null)
-        {
-            Debug.LogWarning("[NoteCine] Nenhuma nota do inventário possui um NoteWorldView correspondente na cena.");
-            return;
-        }
-
-        // Posiciona a câmera no ponto dessa nota
-        PositionCameraAtView(viewToUse);
-
-        // Garante que a camera da nota está renderizando (na RT_Nota)
+        // Posiciona a câmera no ponto de visão da nota 3D
+        Transform camPoint = noteWorldView.CameraPoint;
+        noteCamera.transform.SetPositionAndRotation(camPoint.position, camPoint.rotation);
         noteCamera.enabled = true;
-        Debug.Log("[NoteCine] noteCamera habilitada.");
 
-        // Ativa NotePanel (tela com RT_Nota) por cima do inventário
         notePanel.SetActive(true);
-        Debug.Log("[NoteCine] NotePanel ATIVADO para nota: " + noteToShow.title);
-
         isShowing = true;
-        Debug.Log("[NoteCine] Tela da nota ATIVADA (inventário continua aberto e jogo já está pausado pelo InventoryUI).");
-    }
 
-    private NoteWorldView FindViewForNote(NoteData note)
-    {
-        if (noteWorldViews == null) return null;
+        // Toca o som de nota
+        PlayNoteSound();
 
-        foreach (var view in noteWorldViews)
-        {
-            if (view == null || view.NoteData == null) continue;
-
-            // 1) Tenta por referência (mesmo asset)
-            if (view.NoteData == note)
-                return view;
-
-            // 2) Se os noteId não forem vazios, tenta casar pelo ID
-            if (!string.IsNullOrEmpty(view.NoteData.noteId) &&
-                !string.IsNullOrEmpty(note.noteId) &&
-                view.NoteData.noteId == note.noteId)
-                return view;
-        }
-
-        return null;
-    }
-
-    private void PositionCameraAtView(NoteWorldView view)
-    {
-        Transform p = view.CameraPoint;
-        noteCamera.transform.position = p.position;
-        noteCamera.transform.rotation = p.rotation;
-
-        Debug.Log("[NoteCine] Camera posicionada para nota: " +
-                  (view.NoteData != null ? view.NoteData.title : "sem título") +
-                  " em " + p.position);
+        Debug.Log("[NoteCine] Área de nota ABERTA.");
     }
 
     private void CloseNoteArea()
     {
-        if (!isShowing)
-        {
-            Debug.Log("[NoteCine] CloseNoteArea chamado, mas não estava mostrando. Ignorando.");
-            return;
-        }
-
-        Debug.Log("[NoteCine] Fechando área de nota...");
+        if (!isShowing) return;
 
         isShowing = false;
 
-        // Desativa NotePanel
         if (notePanel != null)
-        {
             notePanel.SetActive(false);
-            Debug.Log("[NoteCine] NotePanel DESATIVADO.");
-        }
 
-        // Opcionalmente desativa a câmera da nota
         if (noteCamera != null)
-        {
             noteCamera.enabled = false;
-            Debug.Log("[NoteCine] noteCamera desabilitada.");
-        }
 
-        Debug.Log("[NoteCine] Área de nota FECHADA (Inventário continua aberto; TimeScale é controlado pelo InventoryUI).");
+        Debug.Log("[NoteCine] Área de nota FECHADA.");
     }
+
+    // ─────────────────── SOM ────────────────────────────────────────
+
+    private void PlayNoteSound()
+    {
+        if (noteSound == null || _audioSource == null) return;
+        _audioSource.PlayOneShot(noteSound, noteSoundVolume);
+    }
+
+    // ─────────────────── UPDATE ─────────────────────────────────────
 
     private void Update()
     {
-        if (!isShowing)
-            return;
+        if (!isShowing) return;
 
-        bool closeKey = Input.GetKeyDown(KeyCode.Escape);
-        bool closeButton = Input.GetButtonDown("Cancel");
-
-        if (closeKey || closeButton)
-        {
-            Debug.Log("[NoteCine] Input de fechar área de nota detectado (ESC ou Cancel).");
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetButtonDown("Cancel"))
             CloseNoteArea();
-        }
+    }
+
+    // ─────────────────── UTILITÁRIOS ────────────────────────────────
+
+    private void ValidateReferences()
+    {
+        if (noteCamera == null)
+            Debug.LogWarning("[NoteCine] noteCamera NÃO atribuída no Inspector.");
+        if (notePanel == null)
+            Debug.LogWarning("[NoteCine] notePanel NÃO atribuído no Inspector.");
+        if (noteWorldView == null)
+            Debug.LogWarning("[NoteCine] noteWorldView NÃO atribuída no Inspector.");
     }
 }

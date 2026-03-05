@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Este script guarda o inventário lógico do jogador:
+// Este script guarda o inventï¿½rio lï¿½gico do jogador:
 // - Quantidade de pilhas
 // - Lista de chaves
 // - Lista de notas (NoteData)
@@ -13,8 +13,14 @@ public class PlayerInventory : MonoBehaviour
     [Header("Chaves")]
     [SerializeField] private List<string> keys = new List<string>();
 
-    [Header("Notas (Diário)")]
+    [Header("Notas (Diï¿½rio)")]
     [SerializeField] private List<NoteData> notes = new List<NoteData>();
+
+    /// <summary>
+    /// Disparado sempre que uma nova nota Ã© adicionada ao inventÃ¡rio.
+    /// Assine este evento para reagir (ex.: trocar textura na nota 3D).
+    /// </summary>
+    public event System.Action<NoteData> OnNoteAdded;
 
     // ==== PILHAS =====================================================
 
@@ -24,7 +30,7 @@ public class PlayerInventory : MonoBehaviour
         if (batteryCount < 0)
             batteryCount = 0;
 
-        Debug.Log("[Inventário] Pilhas: " + batteryCount);
+        Debug.Log("[Inventï¿½rio] Pilhas: " + batteryCount);
     }
 
     public bool UseBattery(int amount = 1)
@@ -32,11 +38,11 @@ public class PlayerInventory : MonoBehaviour
         if (batteryCount >= amount)
         {
             batteryCount -= amount;
-            Debug.Log("[Inventário] Usou pilha. Restam: " + batteryCount);
+            Debug.Log("[Inventï¿½rio] Usou pilha. Restam: " + batteryCount);
             return true;
         }
 
-        Debug.Log("[Inventário] Tentou usar pilha, mas não tem suficientes.");
+        Debug.Log("[Inventï¿½rio] Tentou usar pilha, mas nï¿½o tem suficientes.");
         return false;
     }
 
@@ -52,11 +58,11 @@ public class PlayerInventory : MonoBehaviour
         if (!keys.Contains(keyId))
         {
             keys.Add(keyId);
-            Debug.Log("[Inventário] Pegou chave: " + keyId);
+            Debug.Log("[Inventï¿½rio] Pegou chave: " + keyId);
         }
         else
         {
-            Debug.Log("[Inventário] Já tinha a chave: " + keyId);
+            Debug.Log("[Inventï¿½rio] Jï¿½ tinha a chave: " + keyId);
         }
     }
 
@@ -76,18 +82,19 @@ public class PlayerInventory : MonoBehaviour
     {
         if (note == null)
         {
-            Debug.LogWarning("[Inventário] Tentou adicionar nota nula.");
+            Debug.LogWarning("[Inventï¿½rio] Tentou adicionar nota nula.");
             return;
         }
 
         if (!notes.Contains(note))
         {
             notes.Add(note);
-            Debug.Log("[Inventário] Pegou nota: " + note.title);
+            Debug.Log("[Inventï¿½rio] Pegou nota: " + note.title);
+            OnNoteAdded?.Invoke(note);
         }
         else
         {
-            Debug.Log("[Inventário] Já tinha essa nota: " + note.title);
+            Debug.Log("[Inventï¿½rio] Jï¿½ tinha essa nota: " + note.title);
         }
     }
 
@@ -99,7 +106,7 @@ public class PlayerInventory : MonoBehaviour
     // ==== CARREGAR ESTADO (USADO PELO CHECKPOINT) =====================
 
     /// <summary>
-    /// Carrega um estado completo de inventário.
+    /// Carrega um estado completo de inventï¿½rio.
     /// Usado pelo CheckpointManager ao dar Respawn.
     /// </summary>
     public void LoadInventoryState(int newBatteryCount, List<string> newKeys, List<NoteData> newNotes)
@@ -117,6 +124,6 @@ public class PlayerInventory : MonoBehaviour
         if (newNotes != null)
             notes.AddRange(newNotes);
 
-        Debug.Log("[Inventário] Estado restaurado pelo Checkpoint.");
+        Debug.Log("[Inventï¿½rio] Estado restaurado pelo Checkpoint.");
     }
 }

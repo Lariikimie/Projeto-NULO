@@ -10,7 +10,7 @@ public class NoteViewerUI : MonoBehaviour
     [SerializeField] private TMP_Text titleText;     // TitleText
     [SerializeField] private TMP_Text contentText;   // ContentText
 
-    [Header("Botões (opcional, pode deixar null se não usar)")]
+    [Header("Botï¿½es (opcional, pode deixar null se nï¿½o usar)")]
     [SerializeField] private Button nextButton;
     [SerializeField] private Button previousButton;
     [SerializeField] private Button closeButton;
@@ -21,27 +21,34 @@ public class NoteViewerUI : MonoBehaviour
     [Header("Visual 2D da Nota")]
     [Tooltip("Image de fundo dentro do NotePanel (o 'papel' da nota).")]
     [SerializeField] private Image backgroundImage;
-    [Tooltip("Sprite padrão de fundo, usado quando a nota não tiver um sprite próprio.")]
+    [Tooltip("Sprite padrï¿½o de fundo, usado quando a nota nï¿½o tiver um sprite prï¿½prio.")]
     [SerializeField] private Sprite defaultBackgroundSprite;
-    [Tooltip("Cor padrão do fundo.")]
+    [Tooltip("Cor padrï¿½o do fundo.")]
     [SerializeField] private Color defaultBackgroundColor = Color.white;
 
     [Header("Visual 3D (opcional)")]
-    [Tooltip("Anchor onde será instanciado o prefab 3D da nota, se existir.")]
+    [Tooltip("Anchor onde serï¿½ instanciado o prefab 3D da nota, se existir.")]
     [SerializeField] private Transform background3DAnchor;
+
+    [Header("Som de Nota")]
+    [Tooltip("Som tocado ao selecionar ou trocar de nota (apenas 1 AudioClip).")]
+    [SerializeField] private AudioClip noteSound;
+    [Range(0f, 1f)]
+    [SerializeField] private float noteSoundVolume = 1f;
 
     private List<NoteData> notes;
     private int currentIndex = -1;
     private bool isOpen = false;
     private float previousTimeScale = 1f;
-    private GameObject current3DInstance; // instancia atual do prefab 3D
+    private GameObject current3DInstance;
+    private AudioSource _audioSource;
 
     private void Start()
     {
         if (notePanel != null)
             notePanel.SetActive(false);
         else
-            Debug.LogError("[NoteViewerUI] notePanel NÃO atribuído no Inspector.");
+            Debug.LogError("[NoteViewerUI] notePanel Nï¿½O atribuï¿½do no Inspector.");
 
         if (nextButton != null)
             nextButton.onClick.AddListener(NextNote);
@@ -53,42 +60,47 @@ public class NoteViewerUI : MonoBehaviour
             closeButton.onClick.AddListener(CloseNote);
 
         if (playerInventory == null)
-            Debug.LogWarning("[NoteViewerUI] PlayerInventory NÃO atribuído no Inspector (arraste o Player aqui).");
+            Debug.LogWarning("[NoteViewerUI] PlayerInventory Nï¿½O atribuï¿½do no Inspector (arraste o Player aqui).");
         else
-            Debug.Log("[NoteViewerUI] Start() OK. PlayerInventory atribuído: " + playerInventory.name);
+            Debug.Log("[NoteViewerUI] Start() OK. PlayerInventory atribuï¿½do: " + playerInventory.name);
 
         if (backgroundImage == null)
-            Debug.LogWarning("[NoteViewerUI] backgroundImage NÃO atribuído (arraste a Image de fundo do NotePanel).");
+            Debug.LogWarning("[NoteViewerUI] backgroundImage Nï¿½O atribuï¿½do (arraste a Image de fundo do NotePanel).");
+
+        // Cria AudioSource automaticamente para o som de nota
+        _audioSource = gameObject.AddComponent<AudioSource>();
+        _audioSource.playOnAwake = false;
+        _audioSource.spatialBlend = 0f;
     }
 
     /// <summary>
     /// Chamado pelo InventoryUI/HotbarSlotUI.
-    /// Se 'note' for null, tenta abrir a PRIMEIRA nota válida do inventário.
+    /// Se 'note' for null, tenta abrir a PRIMEIRA nota vï¿½lida do inventï¿½rio.
     /// </summary>
     public void ShowNote(NoteData note)
     {
         if (playerInventory == null)
         {
-            Debug.LogWarning("[NoteViewerUI] PlayerInventory não atribuído em ShowNote. Não é possível carregar notas.");
+            Debug.LogWarning("[NoteViewerUI] PlayerInventory nï¿½o atribuï¿½do em ShowNote. Nï¿½o ï¿½ possï¿½vel carregar notas.");
             return;
         }
 
-        // Pega todas as notas atuais do inventário
+        // Pega todas as notas atuais do inventï¿½rio
         List<NoteData> allNotes = playerInventory.GetAllNotes();
 
         if (allNotes == null)
         {
-            Debug.LogWarning("[NoteViewerUI] Lista de notas retornada pelo PlayerInventory é nula.");
+            Debug.LogWarning("[NoteViewerUI] Lista de notas retornada pelo PlayerInventory ï¿½ nula.");
             return;
         }
 
         if (allNotes.Count == 0)
         {
-            Debug.LogWarning("[NoteViewerUI] PlayerInventory não possui nenhuma nota para exibir.");
+            Debug.LogWarning("[NoteViewerUI] PlayerInventory nï¿½o possui nenhuma nota para exibir.");
             return;
         }
 
-        // Filtra apenas notas não nulas
+        // Filtra apenas notas nï¿½o nulas
         notes = new List<NoteData>();
         foreach (var n in allNotes)
             if (n != null)
@@ -96,7 +108,7 @@ public class NoteViewerUI : MonoBehaviour
 
         if (notes.Count == 0)
         {
-            Debug.LogWarning("[NoteViewerUI] Todas as notas na lista do inventário são nulas. Nada para exibir.");
+            Debug.LogWarning("[NoteViewerUI] Todas as notas na lista do inventï¿½rio sï¿½o nulas. Nada para exibir.");
             return;
         }
 
@@ -106,20 +118,21 @@ public class NoteViewerUI : MonoBehaviour
             currentIndex = notes.IndexOf(note);
             if (currentIndex < 0)
             {
-                Debug.Log("[NoteViewerUI] Nota recebida não está na lista filtrada. Caindo para a primeira nota válida.");
+                Debug.Log("[NoteViewerUI] Nota recebida nï¿½o estï¿½ na lista filtrada. Caindo para a primeira nota vï¿½lida.");
                 currentIndex = 0;
             }
 
-            Debug.Log($"[NoteViewerUI] ShowNote chamado com nota '{note.title}'. Index final: {currentIndex}. Total notas válidas: {notes.Count}");
+            Debug.Log($"[NoteViewerUI] ShowNote chamado com nota '{note.title}'. Index final: {currentIndex}. Total notas vï¿½lidas: {notes.Count}");
         }
         else
         {
             currentIndex = 0;
-            Debug.Log($"[NoteViewerUI] ShowNote chamado com note=null. Abrindo primeira nota válida: '{notes[0].title}'. Total notas válidas: {notes.Count}");
+            Debug.Log($"[NoteViewerUI] ShowNote chamado com note=null. Abrindo primeira nota vï¿½lida: '{notes[0].title}'. Total notas vï¿½lidas: {notes.Count}");
         }
 
         UpdateUI();
         OpenPanel();
+        PlayNoteSound();
     }
 
     private void OpenPanel()
@@ -127,7 +140,7 @@ public class NoteViewerUI : MonoBehaviour
         if (notePanel != null)
             notePanel.SetActive(true);
 
-        // Guarda o timeScale atual (0 se inventário/pause já pausou, 1 se estava em gameplay)
+        // Guarda o timeScale atual (0 se inventï¿½rio/pause jï¿½ pausou, 1 se estava em gameplay)
         previousTimeScale = Time.timeScale;
         Time.timeScale = 0f;
 
@@ -145,7 +158,7 @@ public class NoteViewerUI : MonoBehaviour
         Time.timeScale = previousTimeScale;
         isOpen = false;
 
-        // Destrói objeto 3D atual, se houver
+        // Destrï¿½i objeto 3D atual, se houver
         if (current3DInstance != null)
         {
             Destroy(current3DInstance);
@@ -162,7 +175,7 @@ public class NoteViewerUI : MonoBehaviour
 
         // ESC no teclado
         bool closeKey = Input.GetKeyDown(KeyCode.Escape);
-        // "Cancel" no controle (geralmente botão B / bolinha)
+        // "Cancel" no controle (geralmente botï¿½o B / bolinha)
         bool closeButton = Input.GetButtonDown("Cancel");
 
         if (closeKey || closeButton)
@@ -176,7 +189,7 @@ public class NoteViewerUI : MonoBehaviour
     {
         if (notes == null || notes.Count == 0 || currentIndex < 0 || currentIndex >= notes.Count)
         {
-            Debug.LogWarning("[NoteViewerUI] Não há nota válida para exibir. notes=null? " +
+            Debug.LogWarning("[NoteViewerUI] Nï¿½o hï¿½ nota vï¿½lida para exibir. notes=null? " +
                              (notes == null) + ", count=" + (notes != null ? notes.Count : 0) +
                              ", currentIndex=" + currentIndex);
             return;
@@ -185,7 +198,7 @@ public class NoteViewerUI : MonoBehaviour
         NoteData note = notes[currentIndex];
         if (note == null)
         {
-            Debug.LogWarning("[NoteViewerUI] Nota em notes[" + currentIndex + "] é nula.");
+            Debug.LogWarning("[NoteViewerUI] Nota em notes[" + currentIndex + "] ï¿½ nula.");
             return;
         }
 
@@ -210,7 +223,7 @@ public class NoteViewerUI : MonoBehaviour
         if (nextButton != null)
             nextButton.interactable = canNext;
 
-        Debug.Log($"[NoteViewerUI] UpdateUI exibindo índice {currentIndex} de {notes.Count}. canPrev={canPrev}, canNext={canNext}");
+        Debug.Log($"[NoteViewerUI] UpdateUI exibindo ï¿½ndice {currentIndex} de {notes.Count}. canPrev={canPrev}, canNext={canNext}");
     }
 
     private void Apply2DBackground(NoteData note)
@@ -225,7 +238,7 @@ public class NoteViewerUI : MonoBehaviour
             backgroundImage.sprite = defaultBackgroundSprite;
 
         // Cor: se tiver uma cor definida (diferente de Color.clear), usa;
-        // senão, usa cor padrão.
+        // senï¿½o, usa cor padrï¿½o.
         if (note.backgroundColor.a > 0f ||
             note.backgroundColor.r > 0f ||
             note.backgroundColor.g > 0f ||
@@ -263,6 +276,7 @@ public class NoteViewerUI : MonoBehaviour
             currentIndex++;
             Debug.Log("[NoteViewerUI] NextNote -> novo index = " + currentIndex);
             UpdateUI();
+            PlayNoteSound();
         }
     }
 
@@ -275,6 +289,13 @@ public class NoteViewerUI : MonoBehaviour
             currentIndex--;
             Debug.Log("[NoteViewerUI] PreviousNote -> novo index = " + currentIndex);
             UpdateUI();
+            PlayNoteSound();
         }
+    }
+
+    private void PlayNoteSound()
+    {
+        if (noteSound == null || _audioSource == null) return;
+        _audioSource.PlayOneShot(noteSound, noteSoundVolume);
     }
 }

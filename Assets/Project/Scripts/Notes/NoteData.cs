@@ -2,41 +2,45 @@ using UnityEngine;
 
 /// <summary>
 /// Dados de uma nota/bilhete do jogo. Serve tanto para:
-/// 1) Texto simples (campo "content") — exibir o conteúdo do bilhete;
-/// 2) Diálogo em múltiplas linhas (campo "lines") — com tipo "Speech" ou "Thought"
+/// 1) Texto simples (campo "content") ï¿½ exibir o conteï¿½do do bilhete;
+/// 2) Diï¿½logo em mï¿½ltiplas linhas (campo "lines") ï¿½ com tipo "Speech" ou "Thought"
 ///    para aplicar estilos diferentes no DialogueUI.
-/// 3) (Opcional) Uma única linha "após a leitura" (pensamento final do personagem).
-/// 4) (NOVO) Visual específico por nota: fundo 2D (sprite/cor) e um prefab 3D opcional.
+/// 3) (Opcional) Uma ï¿½nica linha "apï¿½s a leitura" (pensamento final do personagem).
+/// 4) (NOVO) Visual especï¿½fico por nota: fundo 2D (sprite/cor) e um prefab 3D opcional.
 /// </summary>
 [CreateAssetMenu(menuName = "Game/Note Data", fileName = "NewNote", order = 0)]
 public class NoteData : ScriptableObject
 {
-    [Header("Identificação (opcional)")]
-    [Tooltip("Um ID único para a nota (útil para sistemas de save).")]
+    [Header("Identificaï¿½ï¿½o (opcional)")]
+    [Tooltip("Um ID ï¿½nico para a nota (ï¿½til para sistemas de save).")]
     public string noteId;
 
-    [Header("Exibição (título e texto corrido)")]
-    [Tooltip("Título da nota que aparece em listas/diário (ex: 'Bilhete da Diretoria').")]
+    [Header("Exibiï¿½ï¿½o (tï¿½tulo e texto corrido)")]
+    [Tooltip("Tï¿½tulo da nota que aparece em listas/diï¿½rio (ex: 'Bilhete da Diretoria').")]
     public string title;
 
-    [Tooltip("Conteúdo completo da nota (modo texto corrido).")]
+    [Tooltip("Conteï¿½do completo da nota (modo texto corrido).")]
     [TextArea(5, 20)]
     public string content;
 
-    // ========= VISUAL ESPECÍFICO DA NOTA (NOVO) =========
+    // ========= VISUAL ESPECï¿½FICO DA NOTA (NOVO) =========
 
     [Header("Visual 2D da Nota")]
-    [Tooltip("Sprite de fundo da nota (papel rasgado, recorte de jornal, foto etc.). Se estiver vazio, será usado o sprite padrão do NoteViewerUI.")]
+    [Tooltip("Sprite de fundo da nota (papel rasgado, recorte de jornal, foto etc.). Se estiver vazio, serï¿½ usado o sprite padrï¿½o do NoteViewerUI.")]
     public Sprite backgroundSprite;
 
-    [Tooltip("Cor aplicada sobre o fundo da nota. Se deixar em branco (0,0,0,0), o NoteViewerUI usará a cor padrão.")]
+    [Tooltip("Cor aplicada sobre o fundo da nota. Se deixar em branco (0,0,0,0), o NoteViewerUI usarï¿½ a cor padrï¿½o.")]
     public Color backgroundColor = Color.clear;
 
     [Header("Visual 3D (opcional)")]
-    [Tooltip("Prefab 3D ou VFX específico desta nota (ex.: livro na mesa, crucifixo flutuando). Opcional.")]
+    [Tooltip("Prefab 3D ou VFX especï¿½fico desta nota (ex.: livro na mesa, crucifixo flutuando). Opcional.")]
     public GameObject backgroundPrefab3D;
 
-    // ========= DIÁLOGO EM LINHAS =========
+    [Tooltip("Textura que serï¿½ exibida na nota 3D do NoteWorld ao pegar esta nota. " +
+             "Arraste aqui a imagem/foto da nota escaneada.")]
+    public Texture2D noteTexture3D;
+
+    // ========= DIï¿½LOGO EM LINHAS =========
 
     public enum LineKind { Speech, Thought }
 
@@ -47,23 +51,23 @@ public class NoteData : ScriptableObject
         public LineKind kind; // Speech = fala, Thought = pensamento
     }
 
-    [Header("Diálogo em linhas (opcional)")]
-    [Tooltip("Se quiser exibir o bilhete como falas/pensamentos em múltiplas linhas, use este array.")]
+    [Header("Diï¿½logo em linhas (opcional)")]
+    [Tooltip("Se quiser exibir o bilhete como falas/pensamentos em mï¿½ltiplas linhas, use este array.")]
     public DialogueLine[] lines;
 
     [Header("Estilo de fala/pensamento (para DialogueUI)")]
     public Color speechColor = Color.white;
     public Color thoughtColor = new Color(1f, 1f, 1f, 0.9f);
 
-    [Tooltip("Se true, linhas do tipo Thought são exibidas em itálico.")]
+    [Tooltip("Se true, linhas do tipo Thought sï¿½o exibidas em itï¿½lico.")]
     public bool thoughtItalic = true;
 
-    // ========= PÓS-LEITURA (PENSAMENTO FINAL) =========
+    // ========= Pï¿½S-LEITURA (PENSAMENTO FINAL) =========
 
-    [Header("Após a leitura (opcional)")]
-    [Tooltip("Se verdadeiro, após terminar as 'lines' será exibida esta linha final (pensamento/fala).")]
+    [Header("Apï¿½s a leitura (opcional)")]
+    [Tooltip("Se verdadeiro, apï¿½s terminar as 'lines' serï¿½ exibida esta linha final (pensamento/fala).")]
     public bool hasAfterReadingLine = false;
 
-    [Tooltip("Linha única exibida após a leitura (pensamento ou fala final do personagem).")]
+    [Tooltip("Linha ï¿½nica exibida apï¿½s a leitura (pensamento ou fala final do personagem).")]
     public DialogueLine afterReadingLine;
 }
