@@ -26,6 +26,7 @@
 /// Você só precisa arrastar o AudioClip no campo "Note Sound".
 /// ════════════════════════════════════════════════════════════════
 /// </summary>
+[RequireComponent(typeof(AudioSource))]
 public class NoteCineController : MonoBehaviour
 {
     public static NoteCineController Instance { get; private set; }
@@ -69,8 +70,8 @@ public class NoteCineController : MonoBehaviour
 
         Instance = this;
 
-        // Cria AudioSource automaticamente
-        _audioSource = gameObject.AddComponent<AudioSource>();
+        // Obtém AudioSource obrigatório (garantido pelo RequireComponent)
+        _audioSource = GetComponent<AudioSource>();
         _audioSource.playOnAwake = false;
         _audioSource.spatialBlend = 0f; // som 2D (UI)
 

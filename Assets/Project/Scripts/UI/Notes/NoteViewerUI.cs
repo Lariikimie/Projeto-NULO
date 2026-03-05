@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+[RequireComponent(typeof(AudioSource))]
 public class NoteViewerUI : MonoBehaviour
 {
     [Header("UI")]
@@ -67,8 +68,8 @@ public class NoteViewerUI : MonoBehaviour
         if (backgroundImage == null)
             Debug.LogWarning("[NoteViewerUI] backgroundImage N�O atribu�do (arraste a Image de fundo do NotePanel).");
 
-        // Cria AudioSource automaticamente para o som de nota
-        _audioSource = gameObject.AddComponent<AudioSource>();
+        // Obtém AudioSource obrigatório (garantido pelo RequireComponent)
+        _audioSource = GetComponent<AudioSource>();
         _audioSource.playOnAwake = false;
         _audioSource.spatialBlend = 0f;
     }
