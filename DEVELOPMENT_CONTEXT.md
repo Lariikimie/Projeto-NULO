@@ -6,9 +6,9 @@
 - **tests/**: Contains unit tests and integration tests.
 
 ## Documentation Links
-- [API Documentation](https://example.com/api-docs)
-- [User Guide](https://example.com/user-guide)
-- [Developer Guide](https://example.com/developer-guide)
+- <a href="https://example.com/api-docs">API Documentation</a>
+- <a href="https://example.com/user-guide">User Guide</a>
+- <a href="https://example.com/developer-guide">Developer Guide</a>
 
 ## Code Patterns
 - MVC (Model-View-Controller) for web applications.
