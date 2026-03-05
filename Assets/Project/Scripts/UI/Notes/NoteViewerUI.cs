@@ -177,9 +177,9 @@ public class NoteViewerUI : MonoBehaviour
         // ESC no teclado
         bool closeKey = Input.GetKeyDown(KeyCode.Escape);
         // "Cancel" no controle (geralmente bot�o B / bolinha)
-        bool closeButton = Input.GetButtonDown("Cancel");
+        bool cancelPressed = Input.GetButtonDown("Cancel");
 
-        if (closeKey || closeButton)
+        if (closeKey || cancelPressed)
         {
             Debug.Log("[NoteViewerUI] Input de fechar nota detectado (ESC ou Cancel).");
             CloseNote();
